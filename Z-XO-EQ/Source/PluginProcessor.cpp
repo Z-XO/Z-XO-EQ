@@ -183,6 +183,23 @@ void ZXOEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes
     // whose contents will have been created by the getStateInformation() call.
 }
 
+
+juce::AudioProcessorValueTreeState::ParameterLayout ZXOEQAudioProcessor::createParameterLayout() {
+
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    // layout for LowCut Frequency (Range from 20 Hz to 20000 Hz, starting at 20 Hz) - By default we want nothing to occur, start at 20 Hz
+    layout.add(std::make_unique<juce::AudioParameterFloat>("LowCut Frequency", "LowCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20.f));
+
+    // layout for HighCut Frequency (Range from 20 Hz to 20000 Hz, starting at 200000 Hz) - By default we want nothing to occur, start at 200000 Hz
+    layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Frequency", "HighCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20000.f));
+
+
+    return layout;
+}
+
+
+
 //==============================================================================
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
