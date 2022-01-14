@@ -166,7 +166,8 @@ bool ZXOEQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* ZXOEQAudioProcessor::createEditor()
 {
-    return new ZXOEQAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor(*this);
+    //return new ZXOEQAudioProcessorEditor (*this);
 }
 
 //==============================================================================
@@ -185,14 +186,34 @@ void ZXOEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 
 
 juce::AudioProcessorValueTreeState::ParameterLayout ZXOEQAudioProcessor::createParameterLayout() {
+  
 
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // layout for LowCut Frequency (Range from 20 Hz to 20000 Hz, starting at 20 Hz) - By default we want nothing to occur, start at 20 Hz
+
     layout.add(std::make_unique<juce::AudioParameterFloat>("LowCut Frequency", "LowCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20.f));
 
-    // layout for HighCut Frequency (Range from 20 Hz to 20000 Hz, starting at 200000 Hz) - By default we want nothing to occur, start at 200000 Hz
     layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Frequency", "HighCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20000.f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Parametric Frequency", "Parametric Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 750.f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Parametric Gain", "Parametric Gain", juce::NormalisableRange<float>(-30.f, 30.f, 0.25f, 1.f), 0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Parametric Quality", "Parametric Quality", juce::NormalisableRange<float>(0.1f, 15.f, 0.05f, 1.f), 1.f));
+
+
+    juce::StringArray values;
+
+    for (auto i = 0; i < 6; ++i) {
+
+        juce::String string;
+        string << (12 + (i * 12));
+        string << "dB per Octave";
+        values.add(string);
+    }
+
+    layout.add(std::make_unique<juce::AudioParameterChoice>("LowCut Slope", "LowCut Slope", values, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>("HighCut Slope", "HighCut Slope", values, 0));
 
 
     return layout;
