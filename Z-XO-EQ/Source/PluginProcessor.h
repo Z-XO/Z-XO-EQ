@@ -10,6 +10,22 @@
 
 #include <JuceHeader.h>
 
+struct ChainParameters {
+
+    float parametricFrequency{ 0 };
+    float parametricGain{ 0 };
+    float parametricQuality{ 1.f };
+    float lowCutFrequency{ 0 };
+    float highCutFrequency{ 0 };
+
+    int lowCutSlope{ 0 };
+    int highCutSlope{ 0 };
+
+};
+
+
+ChainParameters getChainParameters(juce::AudioProcessorValueTreeState& state);
+
 //==============================================================================
 /**
 */
@@ -72,7 +88,12 @@ private:
 
     MonoChain right;
 
+    enum ChainLocations {
 
+        LowCut,
+        Parametric,
+        HighCut
+    };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ZXOEQAudioProcessor)
 };

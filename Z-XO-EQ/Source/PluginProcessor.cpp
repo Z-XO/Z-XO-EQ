@@ -105,6 +105,19 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     left.prepare(spec);
     right.prepare(spec);
+
+
+    auto chainParameters = getChainParameters(state);
+
+    auto parametricCoeffs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        sampleRate, 
+        chainParameters.parametricFrequency, 
+        chainParameters.parametricQuality,
+        juce::Decibels::decibelsToGain(chainParameters.parametricGain));
+
+
+    *left.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
+    *right.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
 }
 
 void ZXOEQAudioProcessor::releaseResources()
@@ -166,6 +179,22 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
         // ..do something to the data...
     // }
+    
+
+    auto chainParameters = getChainParameters(state);
+
+    auto parametricCoeffs = juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+        getSampleRate(),
+        chainParameters.parametricFrequency,
+        chainParameters.parametricQuality,
+        juce::Decibels::decibelsToGain(chainParameters.parametricGain));
+
+
+    *left.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
+    *right.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
+    
+    
+    
     juce::dsp::AudioBlock<float> block(buffer);
 
     auto leftB = block.getSingleChannelBlock(0);
@@ -206,6 +235,22 @@ void ZXOEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes
     // whose contents will have been created by the getStateInformation() call.
 }
 
+
+ChainParameters getChainParameters(juce::AudioProcessorValueTreeState& state) {
+
+    ChainParameters parameters;
+
+    parameters.lowCutFrequency = state.getRawParameterValue("LowCut Frequency")->load();
+    parameters.lowCutSlope = state.getRawParameterValue("LowCut Slope")->load();
+    parameters.highCutFrequency = state.getRawParameterValue("HighCut Frequency")->load();
+    parameters.highCutSlope = state.getRawParameterValue("HighCut Slope")->load();
+    parameters.parametricFrequency = state.getRawParameterValue("Parametric Frequency")->load();
+    parameters.parametricGain = state.getRawParameterValue("Parametric Gain")->load();
+    parameters.parametricQuality = state.getRawParameterValue("Parametric Quality")->load();
+
+
+    return parameters;
+}
 
 juce::AudioProcessorValueTreeState::ParameterLayout ZXOEQAudioProcessor::createParameterLayout() {
   
