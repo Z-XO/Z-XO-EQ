@@ -160,12 +160,24 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    //for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    //{
+    //    auto* channelData = buffer.getWritePointer (channel);
 
         // ..do something to the data...
-    }
+    // }
+    juce::dsp::AudioBlock<float> block(buffer);
+
+    auto leftB = block.getSingleChannelBlock(0);
+    auto rightB = block.getSingleChannelBlock(1);
+
+    juce::dsp::ProcessContextReplacing<float> leftContext(leftB);
+    juce::dsp::ProcessContextReplacing<float> rightContext(rightB);
+
+    left.process(leftContext);
+    right.process(rightContext);
+
+
 }
 
 //==============================================================================
