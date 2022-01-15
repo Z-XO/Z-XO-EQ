@@ -10,6 +10,19 @@
 
 #include <JuceHeader.h>
 
+
+// enumeration of slope values
+
+enum SlopeValues {
+
+    Slope_12dB,
+    Slope_24dB,
+    Slope_36dB,
+    Slope_48dB,
+    Slope_60dB,
+    Slope_72dB
+};
+
 struct ChainParameters {
 
     float parametricFrequency{ 0 };
@@ -18,10 +31,11 @@ struct ChainParameters {
     float lowCutFrequency{ 0 };
     float highCutFrequency{ 0 };
 
-    int lowCutSlope{ 0 };
-    int highCutSlope{ 0 };
+    int lowCutSlope{ SlopeValues::Slope_12dB };
+    int highCutSlope{ SlopeValues::Slope_12dB };
 
 };
+
 
 
 ChainParameters getChainParameters(juce::AudioProcessorValueTreeState& state);

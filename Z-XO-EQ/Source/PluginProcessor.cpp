@@ -118,6 +118,28 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     *left.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
     *right.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
+
+    // Slope Choice for low cut coefficients
+    // Slope choice of 0 corresponds to 12 dB per octave translating to an order of 2
+    // Slope choice of 1 corresponds to 24 dB per octave translating to an order of 4, etc...
+    
+    auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.lowCutFrequency, 
+        sampleRate, 
+        (2 * (chainParameters.lowCutSlope + 1)));
+
+    // Left audio chain initialization -> lowCut filter chain
+    
+    auto& leftLowCut = left.get<ChainLocations::LowCut>();
+
+    // bypass positions in chain
+
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+    leftLowCut.setBypassed<4>(true);
+
+
 }
 
 void ZXOEQAudioProcessor::releaseResources()
@@ -241,9 +263,9 @@ ChainParameters getChainParameters(juce::AudioProcessorValueTreeState& state) {
     ChainParameters parameters;
 
     parameters.lowCutFrequency = state.getRawParameterValue("LowCut Frequency")->load();
-    parameters.lowCutSlope = state.getRawParameterValue("LowCut Slope")->load();
+    parameters.lowCutSlope = static_cast<SlopeValues>(state.getRawParameterValue("LowCut Slope")->load());
     parameters.highCutFrequency = state.getRawParameterValue("HighCut Frequency")->load();
-    parameters.highCutSlope = state.getRawParameterValue("HighCut Slope")->load();
+    parameters.highCutSlope = static_cast<SlopeValues>(state.getRawParameterValue("HighCut Slope")->load());
     parameters.parametricFrequency = state.getRawParameterValue("Parametric Frequency")->load();
     parameters.parametricGain = state.getRawParameterValue("Parametric Gain")->load();
     parameters.parametricQuality = state.getRawParameterValue("Parametric Quality")->load();
