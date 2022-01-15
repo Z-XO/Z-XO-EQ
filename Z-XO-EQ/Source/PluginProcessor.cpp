@@ -245,7 +245,7 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     // FOR HIGH CUT ( LOW PASS HIGH ORDER)
     auto highCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.highCutFrequency,
         sampleRate,
-        (2 * (chainParameters.lowCutSlope + 1)));
+        (2 * (chainParameters.highCutSlope + 1)));
 
     auto& leftHighCut = left.get<ChainLocations::HighCut>();
 
@@ -427,7 +427,7 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         juce::Decibels::decibelsToGain(chainParameters.parametricGain));
 
 
-    auto lowCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.lowCutFrequency,
+    auto lowCutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainParameters.lowCutFrequency,
         getSampleRate(),
         (2 * (chainParameters.lowCutSlope + 1)));
 
@@ -548,7 +548,7 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     // FOR HIGH CUT ( LOW PASS HIGH ORDER)
     auto highCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.highCutFrequency,
         getSampleRate(),
-        (2 * (chainParameters.lowCutSlope + 1)));
+        (2 * (chainParameters.highCutSlope + 1)));
 
     auto& leftHighCut = left.get<ChainLocations::HighCut>();
 
@@ -739,7 +739,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZXOEQAudioProcessor::createP
 
     juce::StringArray values;
 
-    for (auto i = 0; i < 6; ++i) {
+    for (auto i = 0; i < 4; ++i) {
 
         juce::String string;
         string << (12 + (i * 12));

@@ -18,9 +18,7 @@ enum SlopeValues {
     Slope_12dB,
     Slope_24dB,
     Slope_36dB,
-    Slope_48dB,
-    Slope_60dB,
-    Slope_72dB
+    Slope_48dB
 };
 
 struct ChainParameters {
