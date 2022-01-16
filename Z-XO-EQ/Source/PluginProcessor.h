@@ -29,8 +29,8 @@ struct ChainParameters {
     float lowCutFrequency{ 0 };
     float highCutFrequency{ 0 };
 
-    int lowCutSlope{ SlopeValues::Slope_12dB };
-    int highCutSlope{ SlopeValues::Slope_12dB };
+    SlopeValues  lowCutSlope{ SlopeValues::Slope_12dB };
+    SlopeValues  highCutSlope{ SlopeValues::Slope_12dB };
 
 };
 
@@ -59,7 +59,60 @@ using Coefficients = Filter::CoefficientsPtr;
 
 void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
-Coefficients makeParametricFilter(const ChainParameters& chainSettings, double sampleRate);
+Coefficients makeParametricFilter(const ChainParameters& chainParameters, double sampleRate);
+
+
+inline auto makeLowCutFilter(const ChainParameters& chainParameters, double sampleRate) {
+    return juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainParameters.lowCutFrequency,
+        sampleRate,
+        (2 * (chainParameters.lowCutSlope + 1)));
+}
+
+inline auto makeHighCutFilter(const ChainParameters& chainParameters, double sampleRate) {
+    return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.lowCutFrequency,
+        sampleRate,
+        (2 * (chainParameters.lowCutSlope + 1)));
+}
+
+template<int Index, typename ChainType, typename CoefficientType>
+void update(ChainType& chain, const CoefficientType& coefficients)
+{
+    updateCoefficients(chain.template get<Index>().coefficients, coefficients[Index]);
+    chain.template setBypassed<Index>(false);
+}
+
+template<typename ChainType, typename CoefficientType>
+void updateCutFilter(ChainType& chain,
+    const CoefficientType& coefficients,
+    const SlopeValues& slope)
+{
+    chain.template setBypassed<0>(true);
+    chain.template setBypassed<1>(true);
+    chain.template setBypassed<2>(true);
+    chain.template setBypassed<3>(true);
+
+    switch (slope)
+    {
+    case Slope_48dB:
+    {
+        update<3>(chain, coefficients);
+    }
+    case Slope_36dB:
+    {
+        update<2>(chain, coefficients);
+    }
+    case Slope_24dB:
+    {
+        update<1>(chain, coefficients);
+    }
+    case Slope_12dB:
+    {
+        update<0>(chain, coefficients);
+    }
+    }
+}
+
+
 
 // <------------------------------------------------------------------------>
 
@@ -106,7 +159,9 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    void updateParametricFilter(const ChainParameters& chainSettings);
+    void updateParametricFilter(const ChainParameters& chainParameters);
+    void updateLowCutFilters(const ChainParameters& chainParameters);
+    void updateHighCutFilters(const ChainParameters& chainParameters);
 
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

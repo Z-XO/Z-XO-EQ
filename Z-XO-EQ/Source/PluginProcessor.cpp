@@ -391,27 +391,48 @@ bool ZXOEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 // FOR RESPONSE CURVE SINCE I DON'T KNOW HOW ELSE <------------------->
 
-Coefficients makeParametricFilter(const ChainParameters& chainSettings, double sampleRate) {
+Coefficients makeParametricFilter(const ChainParameters& chainParameters, double sampleRate) {
     
-    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.parametricFrequency,
-        chainSettings.parametricQuality, juce::Decibels::decibelsToGain(chainSettings.parametricGain));
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainParameters.parametricFrequency,
+        chainParameters.parametricQuality, juce::Decibels::decibelsToGain(chainParameters.parametricGain));
 }
 
 
-void ZXOEQAudioProcessor::updateParametricFilter(const ChainParameters& chainSettings) {
+void ZXOEQAudioProcessor::updateParametricFilter(const ChainParameters & chainParameters) {
 
 
-    auto parametricCoefficients = makeParametricFilter(chainSettings, getSampleRate());
+    auto parametricCoefficients = makeParametricFilter(chainParameters, getSampleRate());
 
 
     updateCoefficients(left.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
     updateCoefficients(right.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
 }
 
-void updateCoefficients(Coefficients& old, const Coefficients& replacements)
+void updateCoefficients(Coefficients& old, const Coefficients &replacements)
 {
     *old = *replacements;
 }
+
+void ZXOEQAudioProcessor::updateLowCutFilters(const ChainParameters &chainParameters) {
+
+    auto lowCutCoeffs = makeLowCutFilter(chainParameters, getSampleRate());
+    auto& leftLowCut = left.get<ChainLocations::LowCut>();
+    auto& rightLowCut = right.get<ChainLocations::LowCut>();
+
+    updateCutFilter(rightLowCut, lowCutCoeffs, chainParameters.lowCutSlope);
+    updateCutFilter(leftLowCut, lowCutCoeffs, chainParameters.lowCutSlope);
+}
+
+void ZXOEQAudioProcessor::updateHighCutFilters(const ChainParameters& chainParameters) {
+
+    auto highCutCoeffs = makeHighCutFilter(chainParameters, getSampleRate());
+    auto& leftHighCut = left.get<ChainLocations::HighCut>();
+    auto& rightHighCut = right.get<ChainLocations::HighCut>();
+
+    updateCutFilter(rightHighCut, highCutCoeffs, chainParameters.highCutSlope);
+    updateCutFilter(leftHighCut, highCutCoeffs, chainParameters.highCutSlope);
+}
+
 
 // <------------------------------------------------------------------------>
 
