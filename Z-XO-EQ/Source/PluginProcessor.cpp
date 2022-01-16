@@ -685,8 +685,8 @@ bool ZXOEQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* ZXOEQAudioProcessor::createEditor()
 {
-    return new juce::GenericAudioProcessorEditor(*this);
-    //return new ZXOEQAudioProcessorEditor (*this);
+    //return new juce::GenericAudioProcessorEditor(*this);
+    return new ZXOEQAudioProcessorEditor (*this);
 }
 
 //==============================================================================
