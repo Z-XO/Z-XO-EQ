@@ -36,7 +36,32 @@ struct ChainParameters {
 
 
 
+
 ChainParameters getChainParameters(juce::AudioProcessorValueTreeState& state);
+
+using Filter = juce::dsp::IIR::Filter<float>;
+
+using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+
+using MonoChain = juce::dsp::ProcessorChain < CutFilter, Filter, CutFilter >;
+
+
+enum ChainLocations {
+
+    LowCut,
+    Parametric,
+    HighCut
+};
+
+// <---------------------------------------------------------------------->
+
+using Coefficients = Filter::CoefficientsPtr;
+
+void updateCoefficients(Coefficients& old, const Coefficients& replacements);
+
+Coefficients makeParametricFilter(const ChainParameters& chainSettings, double sampleRate);
+
+// <------------------------------------------------------------------------>
 
 //==============================================================================
 /**
@@ -81,6 +106,8 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    void updateParametricFilter(const ChainParameters& chainSettings);
+
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -90,22 +117,11 @@ public:
 private:
     //==============================================================================
 
-    using Filter = juce::dsp::IIR::Filter<float>;
-
-    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
-
-    using MonoChain = juce::dsp::ProcessorChain < CutFilter, Filter, CutFilter >;
 
     MonoChain left;
 
     MonoChain right;
 
-    enum ChainLocations {
-
-        LowCut,
-        Parametric,
-        HighCut
-    };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ZXOEQAudioProcessor)
 };

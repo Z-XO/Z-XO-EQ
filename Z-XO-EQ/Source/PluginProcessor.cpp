@@ -389,6 +389,37 @@ bool ZXOEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 }
 #endif
 
+// FOR RESPONSE CURVE SINCE I DON'T KNOW HOW ELSE <------------------->
+
+Coefficients makeParametricFilter(const ChainParameters& chainSettings, double sampleRate) {
+    
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.parametricFrequency,
+        chainSettings.parametricQuality, juce::Decibels::decibelsToGain(chainSettings.parametricGain));
+}
+
+
+void ZXOEQAudioProcessor::updateParametricFilter(const ChainParameters& chainSettings) {
+
+
+    auto parametricCoefficients = makeParametricFilter(chainSettings, getSampleRate());
+
+
+    updateCoefficients(left.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
+    updateCoefficients(right.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
+}
+
+void updateCoefficients(Coefficients& old, const Coefficients& replacements)
+{
+    *old = *replacements;
+}
+
+// <------------------------------------------------------------------------>
+
+
+
+
+
+
 void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
