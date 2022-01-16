@@ -24,22 +24,36 @@ struct CustomRotatarySlider : juce::Slider {
 
 };
 
-class ZXOEQAudioProcessorEditor  : public juce::AudioProcessorEditor, juce::AudioProcessorParameter::Listener, juce::Timer
-{
-public:
-    ZXOEQAudioProcessorEditor (ZXOEQAudioProcessor&);
-    ~ZXOEQAudioProcessorEditor() override;
+struct ResponseCurveComponent : juce::Component, juce::AudioProcessorParameter::Listener, juce::Timer {
+   
+    ResponseCurveComponent(ZXOEQAudioProcessor&);
+   
+    ~ResponseCurveComponent();
 
     void parameterValueChanged(int parameterIndex, float newValue) override;
-
-
 
     void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override { }
 
     void timerCallback() override;
 
+    void paint(juce::Graphics& g) override;
+
+private:
+    ZXOEQAudioProcessor& audioProcessor;
+    juce::Atomic<bool> shouldUpdateParameters{ false };
+
+    MonoChain MonoChain;
+
+
+};
+
+class ZXOEQAudioProcessorEditor  : public juce::AudioProcessorEditor
+{
+public:
+    ZXOEQAudioProcessorEditor (ZXOEQAudioProcessor&);
+    ~ZXOEQAudioProcessorEditor() override;
+
     //==============================================================================
-    void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
@@ -47,10 +61,11 @@ private:
     // access the processor object that created it.
     ZXOEQAudioProcessor& audioProcessor;
 
-    juce::Atomic<bool> shouldUpdateParameters{ false };
 
     // Adding Sliders to private class
 
+    ResponseCurveComponent responseCurveComponent;
+    
     CustomRotatarySlider parametricFrequencySlider;
     CustomRotatarySlider parametricGainSlider;
     CustomRotatarySlider parametricQualitySlider;
@@ -73,7 +88,6 @@ private:
     juce::AudioProcessorValueTreeState::SliderAttachment lowCutSlopeSliderAttachment;
     juce::AudioProcessorValueTreeState::SliderAttachment highCutSlopeSliderAttachment;
 
-    MonoChain MonoChain;
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ZXOEQAudioProcessorEditor)

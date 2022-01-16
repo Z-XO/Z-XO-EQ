@@ -69,9 +69,9 @@ inline auto makeLowCutFilter(const ChainParameters& chainParameters, double samp
 }
 
 inline auto makeHighCutFilter(const ChainParameters& chainParameters, double sampleRate) {
-    return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.lowCutFrequency,
+    return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainParameters.highCutFrequency,
         sampleRate,
-        (2 * (chainParameters.lowCutSlope + 1)));
+        (2 * (chainParameters.highCutSlope + 1)));
 }
 
 template<int Index, typename ChainType, typename CoefficientType>
