@@ -5,42 +5,15 @@
 
   ==============================================================================
 */
-#include "PluginProcessor.cpp"
+
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
 
-void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float roataryStartAngle, float rotaryEndAngle, juce::Slider&) {
-
-    //auto bounds = juce::Rectangle<float>(x, y, width, height);
-
-    //g.setColour(juce::Colour(27u, 94u, 195u));
-    //g.fillEllipse(bounds);
-
-    //g.setColour(juce::Colour(27u, 44u, 195u));
-    //g.drawEllipse(bounds, 1.f);
+void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float roataryStartAngle, float rotaryEndAngle, juce::Slider& slider) {
 
 
-    //auto center = bounds.getCentre();
-
-    //juce::Path p;
-
-    //juce::Rectangle<float> right;
-
-    //right.setLeft(center.getX() - 2);
-    //right.setRight(center.getX() + 2);
-    //right.setTop(bounds.getY());
-    //right.setBottom(center.getY());
-
-    //p.addRectangle(right);
-
-    //jassert(roataryStartAngle < rotaryEndAngle);
-
-    //auto SliderAngleRadian = juce::jmap(sliderPosProportional, 0.f, 1.f, roataryStartAngle, rotaryEndAngle);
-
-    //p.applyTransform(juce::AffineTransform().rotated(SliderAngleRadian, center.getX(), center.getY()));
-
-    //g.fillPath(p);
+    auto bounds = juce::Rectangle<float>(x, y, width, height);
 
     auto radius = (float)juce::jmin(width / 2, height / 2) - 4.0f;
     auto centreX = (float)x + (float)width * 0.5f;
@@ -58,8 +31,28 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     g.setColour(juce::Colours::ghostwhite);
     g.drawEllipse(rx, ry, rw, rw, 2.0f);
 
+    juce::Rectangle<float> r;
+
+    if (auto* rswl = dynamic_cast<RotarySliderWithLabels*> (&slider) ) {
+        
+        g.setFont(rswl->getTextBoxHeight());
+        auto text = rswl->getDisplayString();
+        auto stringWidth = g.getCurrentFont().getStringWidth(text);
+
+        r.setSize(stringWidth + 4, rswl->getTextHeight() + 2);
+        r.setCentre(bounds.getCentre());
+        g.setColour(juce::Colours::steelblue);
+        g.fillRect(r);
+
+        g.setColour(juce::Colours::white);
+        g.drawFittedText(text, r.toNearestInt(), juce::Justification::centred, 1);
+  
+    
+    }
+
+
     juce::Path p;
-    auto pointerLength = radius * 0.73f;
+    auto pointerLength = radius * 0.53f;
     auto pointerThickness = 2.0f;
     p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
     p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
@@ -68,6 +61,40 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     g.setColour(juce::Colours::yellow);
     g.fillPath(p);
 
+}
+
+juce::String RotarySliderWithLabels::getDisplayString() const {
+    if (auto* choiceParameter = dynamic_cast<juce::AudioParameterChoice*>(audioParam)) {
+        
+        return choiceParameter->getCurrentChoiceName();
+
+    }
+
+    juce::String string;
+    bool addK = false;
+
+    if (auto* floatParameter = dynamic_cast<juce::AudioParameterFloat*>(audioParam)) {
+        float value = getValue();
+
+        if (value > 999.f) {
+            value /= 1000.f;
+            addK = true;
+
+        }
+        
+        string = juce::String(value, (addK ? 2 : 0));
+    }
+    if (suffix.isNotEmpty()) {
+        
+        string << " ";
+        if (addK == true) {
+            string << "k";
+
+            string << suffix;
+        }
+    }
+
+    return string;
 }
 
 void RotarySliderWithLabels::paint(juce::Graphics& g) {
@@ -79,10 +106,6 @@ void RotarySliderWithLabels::paint(juce::Graphics& g) {
 
     auto sliderBoundary = getSliderBounds();
 
-    g.setColour(juce::Colours::red);
-    g.drawRect(getLocalBounds());
-    g.setColour(juce::Colours::yellow);
-    g.drawRect(sliderBoundary);
 
     getLookAndFeel().drawRotarySlider(g, sliderBoundary.getX(), 
         sliderBoundary.getY(), sliderBoundary.getWidth(), sliderBoundary.getHeight(),
@@ -240,7 +263,7 @@ void ResponseCurveComponent::timerCallback() {
 
 //==============================================================================
     ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
-        : AudioProcessorEditor(&p), audioProcessor(p), responseCurveComponent(audioProcessor),
+        : AudioProcessorEditor(&p), audioProcessor(p), 
         parametricFrequencySlider(*audioProcessor.state.getParameter("Parametric Frequency"), "Hz"),
         parametricGainSlider(*audioProcessor.state.getParameter("Parametric Gain"), "dB"),
         parametricQualitySlider(*audioProcessor.state.getParameter("Parametric Quality"), ""),
@@ -248,6 +271,7 @@ void ResponseCurveComponent::timerCallback() {
         lowCutSlopeSlider(*audioProcessor.state.getParameter("LowCut Slope"), "dB/Oct"),
         highCutFrequencySlider(*audioProcessor.state.getParameter("HighCut Frequency"), "Hz"),
         highCutSlopeSlider(*audioProcessor.state.getParameter("HighCut Slope"), "dB/Oct"),
+        responseCurveComponent(audioProcessor),
 
 
 
