@@ -16,11 +16,37 @@
 */
 
 // Construction of Slider 
-struct CustomRotatarySlider : juce::Slider {
 
-    CustomRotatarySlider() : juce::Slider(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag, juce::Slider::TextEntryBoxPosition::NoTextBox) {
 
+struct LookAndFeel : juce::LookAndFeel_V4 {
+
+    void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height, float sliderPosProportional, float roataryStartAngle, float rotaryEndAngle, juce::Slider&) override {};
+};
+
+struct RotarySliderWithLabels : juce::Slider {
+
+    RotarySliderWithLabels(juce::RangedAudioParameter& value, const juce::String& unitSuffix) :
+        juce::Slider(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag, juce::Slider::TextEntryBoxPosition::NoTextBox), audioParam(&value), suffix(unitSuffix) {
+
+        setLookAndFeel(&LAF);
     }
+
+    ~RotarySliderWithLabels() {
+        setLookAndFeel(nullptr);
+    }
+
+    void paint(juce::Graphics& g) override {};
+    juce::Rectangle<int> getSliderBounds() const;
+    int getTextHeight() const { return 14; }
+    juce::String getDisplayString() const;
+
+private:
+
+    LookAndFeel LAF;
+
+    juce::RangedAudioParameter* audioParam;
+    juce::String suffix;
+
 
 };
 
@@ -66,15 +92,15 @@ private:
 
     ResponseCurveComponent responseCurveComponent;
     
-    CustomRotatarySlider parametricFrequencySlider;
-    CustomRotatarySlider parametricGainSlider;
-    CustomRotatarySlider parametricQualitySlider;
+    RotarySliderWithLabels parametricFrequencySlider;
+    RotarySliderWithLabels parametricGainSlider;
+    RotarySliderWithLabels parametricQualitySlider;
 
-    CustomRotatarySlider lowCutFrequencySlider;
-    CustomRotatarySlider highCutFrequencySlider;
+    RotarySliderWithLabels lowCutFrequencySlider;
+    RotarySliderWithLabels highCutFrequencySlider;
 
-    CustomRotatarySlider lowCutSlopeSlider;
-    CustomRotatarySlider highCutSlopeSlider;
+    RotarySliderWithLabels lowCutSlopeSlider;
+    RotarySliderWithLabels highCutSlopeSlider;
 
     // Attach sliders to DSP values
 

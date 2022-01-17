@@ -16,7 +16,7 @@ ResponseCurveComponent::ResponseCurveComponent(ZXOEQAudioProcessor& p) : audioPr
         parameter->addListener(this);
     }
 
-    startTimerHz(60);
+    startTimerHz(165);
 
 }
 
@@ -129,11 +129,11 @@ void ResponseCurveComponent::timerCallback() {
             responseCurve.lineTo(visualResponse.getX() + x, map(magnitudes[x]));
         }
 
-        g.setColour(juce::Colours::orange);
+        g.setColour(juce::Colours::white);
         g.drawRoundedRectangle(visualResponse.toFloat(), 4.f, 1.f);
 
-        g.setColour(juce::Colours::white);
-        g.strokePath(responseCurve, juce::PathStrokeType(2.f));
+        g.setColour(juce::Colours::black);
+        g.strokePath(responseCurve, juce::PathStrokeType(4.f));
 
 
     }
@@ -142,8 +142,19 @@ void ResponseCurveComponent::timerCallback() {
 
 
 //==============================================================================
-ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor (ZXOEQAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), responseCurveComponent(audioProcessor),
+    ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
+        : AudioProcessorEditor(&p), audioProcessor(p), responseCurveComponent(audioProcessor),
+        parametricFrequencySlider(*audioProcessor.state.getParameter("Parametric Frequency"), "Hz"),
+        parametricGainSlider(*audioProcessor.state.getParameter("Parametric Gain"), "dB"),
+        parametricQualitySlider(*audioProcessor.state.getParameter("Parametric Quality"), ""),
+        lowCutFrequencySlider(*audioProcessor.state.getParameter("LowCut Frequency"), "Hz"),
+        lowCutSlopeSlider(*audioProcessor.state.getParameter("LowCut Slope"), "dB/Oct"),
+        highCutFrequencySlider(*audioProcessor.state.getParameter("HighCut Frequency"), "Hz"),
+        highCutSlopeSlider(*audioProcessor.state.getParameter("HighCut Slope"), "dB/Oct"),
+
+
+
+
     parametricFrequencySliderAttachment(audioProcessor.state, "Parametric Frequency", parametricFrequencySlider),
     parametricGainSliderAttachment(audioProcessor.state, "Parametric Gain", parametricGainSlider),
     parametricQualitySliderAttachment(audioProcessor.state, "Parametric Quality", parametricQualitySlider),
