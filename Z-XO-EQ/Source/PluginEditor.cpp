@@ -10,6 +10,103 @@
 #include "PluginEditor.h"
 
 
+void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float roataryStartAngle, float rotaryEndAngle, juce::Slider&) {
+
+    //auto bounds = juce::Rectangle<float>(x, y, width, height);
+
+    //g.setColour(juce::Colour(27u, 94u, 195u));
+    //g.fillEllipse(bounds);
+
+    //g.setColour(juce::Colour(27u, 44u, 195u));
+    //g.drawEllipse(bounds, 1.f);
+
+
+    //auto center = bounds.getCentre();
+
+    //juce::Path p;
+
+    //juce::Rectangle<float> right;
+
+    //right.setLeft(center.getX() - 2);
+    //right.setRight(center.getX() + 2);
+    //right.setTop(bounds.getY());
+    //right.setBottom(center.getY());
+
+    //p.addRectangle(right);
+
+    //jassert(roataryStartAngle < rotaryEndAngle);
+
+    //auto SliderAngleRadian = juce::jmap(sliderPosProportional, 0.f, 1.f, roataryStartAngle, rotaryEndAngle);
+
+    //p.applyTransform(juce::AffineTransform().rotated(SliderAngleRadian, center.getX(), center.getY()));
+
+    //g.fillPath(p);
+
+    auto radius = (float)juce::jmin(width / 2, height / 2) - 4.0f;
+    auto centreX = (float)x + (float)width * 0.5f;
+    auto centreY = (float)y + (float)height * 0.5f;
+    auto rx = centreX - radius;
+    auto ry = centreY - radius;
+    auto rw = radius * 2.0f;
+    auto angle = roataryStartAngle + sliderPosProportional * (rotaryEndAngle - roataryStartAngle);
+
+    // fill
+    g.setColour(juce::Colours::steelblue);
+    g.fillEllipse(rx, ry, rw, rw);
+
+    // outline
+    g.setColour(juce::Colours::ghostwhite);
+    g.drawEllipse(rx, ry, rw, rw, 2.0f);
+
+    juce::Path p;
+    auto pointerLength = radius * 0.73f;
+    auto pointerThickness = 2.0f;
+    p.addRectangle(-pointerThickness * 0.5f, -radius, pointerThickness, pointerLength);
+    p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
+
+    // pointer
+    g.setColour(juce::Colours::yellow);
+    g.fillPath(p);
+
+}
+
+void RotarySliderWithLabels::paint(juce::Graphics& g) {
+
+    auto startingRotaryLocation = juce::degreesToRadians(180.f + 45.f);
+    auto endingRotaryLocation = juce::degreesToRadians(180.f - 45.f) + juce::MathConstants<float>::twoPi;
+
+    auto range = getRange();
+
+    auto sliderBoundary = getSliderBounds();
+
+    g.setColour(juce::Colours::red);
+    g.drawRect(getLocalBounds());
+    g.setColour(juce::Colours::yellow);
+    g.drawRect(sliderBoundary);
+
+    getLookAndFeel().drawRotarySlider(g, sliderBoundary.getX(), 
+        sliderBoundary.getY(), sliderBoundary.getWidth(), sliderBoundary.getHeight(),
+        juce::jmap(getValue(), range.getStart(), range.getEnd(), 0.0, 1.0), startingRotaryLocation, endingRotaryLocation, *this);
+}
+
+juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const {
+    
+   // return getLocalBounds();
+    auto bounds = getLocalBounds();
+    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight());
+
+    size -= getTextHeight() * 2;
+
+    juce::Rectangle<int> r;
+    r.setSize(size, size);
+    r.setCentre(bounds.getCentreX(), 0);
+    r.setY(2);
+
+    return r;
+
+}
+
+
 ResponseCurveComponent::ResponseCurveComponent(ZXOEQAudioProcessor& p) : audioProcessor(p) {
     const auto& parameters = audioProcessor.getParameters();
     for (auto parameter : parameters) {
@@ -129,8 +226,8 @@ void ResponseCurveComponent::timerCallback() {
             responseCurve.lineTo(visualResponse.getX() + x, map(magnitudes[x]));
         }
 
-        g.setColour(juce::Colours::white);
-        g.drawRoundedRectangle(visualResponse.toFloat(), 4.f, 1.f);
+        g.setColour(juce::Colours::ghostwhite);
+        g.drawRoundedRectangle(visualResponse.toFloat(), 4.f, 4.f);
 
         g.setColour(juce::Colours::black);
         g.strokePath(responseCurve, juce::PathStrokeType(4.f));
