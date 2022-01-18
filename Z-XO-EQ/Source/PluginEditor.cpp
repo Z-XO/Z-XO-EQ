@@ -75,24 +75,23 @@ juce::String RotarySliderWithLabels::getDisplayString() const {
 
     if (auto* floatParameter = dynamic_cast<juce::AudioParameterFloat*>(audioParam)) {
         float value = getValue();
-
-        if (value > 999.f) {
-            value /= 1000.f;
-            addK = true;
-
-        }
-        
-        string = juce::String(value, (addK ? 2 : 0));
+        string = juce::String(value);
     }
-    if (suffix.isNotEmpty()) {
-        
-        string << " ";
-        if (addK == true) {
-            string << "k";
 
-            string << suffix;
-        }
+    if (suffix.contains("dB")) {
+        
+        string < " dB";
+
+        string << suffix;
     }
+
+    if (suffix.contains("Hz")) {
+
+        string < " Hz";
+
+        string << suffix;
+    }
+
 
     return string;
 }
@@ -110,6 +109,34 @@ void RotarySliderWithLabels::paint(juce::Graphics& g) {
     getLookAndFeel().drawRotarySlider(g, sliderBoundary.getX(), 
         sliderBoundary.getY(), sliderBoundary.getWidth(), sliderBoundary.getHeight(),
         juce::jmap(getValue(), range.getStart(), range.getEnd(), 0.0, 1.0), startingRotaryLocation, endingRotaryLocation, *this);
+
+
+    auto center = sliderBoundary.toFloat().getCentre();
+    auto radius = sliderBoundary.getWidth() * 0.5f;
+
+    g.setColour(juce::Colour(0u, 172u, 1u));
+    g.setFont(getTextHeight());
+
+    auto numChoices = labels.size();
+
+    for (auto i = 0; i < numChoices; ++i) {
+
+        auto position = labels[i].positions;
+        jassert(0.f <= position);
+        jassert(position <= 1.f);
+
+        auto angle = juce::jmap(position, 0.f, 1.f, startingRotaryLocation, endingRotaryLocation);
+
+        auto c = center.getPointOnCircumference(radius + getTextHeight() * .5f, angle);
+
+        juce::Rectangle<float> r;
+        auto string = labels[i].label;
+        r.setSize(g.getCurrentFont().getStringWidth(string), getTextHeight());
+        r.setCentre(c);
+        r.setY(r.getY() + getTextHeight());
+        
+        g.drawFittedText(string, r.toNearestInt(), juce::Justification::centred, 1);
+    }
 }
 
 juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const {
@@ -136,7 +163,7 @@ ResponseCurveComponent::ResponseCurveComponent(ZXOEQAudioProcessor& p) : audioPr
         parameter->addListener(this);
     }
 
-    startTimerHz(165);
+    startTimerHz(60);
 
 }
 
@@ -178,8 +205,15 @@ void ResponseCurveComponent::timerCallback() {
         // (Our component is opaque, so we must completely fill the background with a solid colour)
         g.fillAll(juce::Colours::grey);
 
-        
-        auto visualResponse = getLocalBounds();
+        g.drawImage(background, getLocalBounds().toFloat());
+
+
+       // auto visualResponse = getLocalBounds();
+
+      //  auto visualResponse = getRenderArea();
+
+        auto visualResponse = getResponseArea();
+
         auto width = visualResponse.getWidth();
 
         auto& lowCutChain = MonoChain.get<ChainLocations::LowCut>();
@@ -250,7 +284,7 @@ void ResponseCurveComponent::timerCallback() {
         }
 
         g.setColour(juce::Colours::ghostwhite);
-        g.drawRoundedRectangle(visualResponse.toFloat(), 4.f, 4.f);
+        g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 4.f);
 
         g.setColour(juce::Colours::black);
         g.strokePath(responseCurve, juce::PathStrokeType(4.f));
@@ -259,7 +293,86 @@ void ResponseCurveComponent::timerCallback() {
     }
 
 
+    void ResponseCurveComponent::resized() {
 
+  
+
+        background = juce::Image(juce::Image::PixelFormat::RGB, getWidth(), getHeight(), true);
+
+        juce::Graphics g(background);
+
+        juce::Array<float> frequencies{ 
+        
+        20, 30, 40, 50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000, 20000
+        
+        
+        };
+
+        auto renderArea = getResponseArea();
+        auto left = renderArea.getX();
+        auto right = renderArea.getRight();
+        auto top = renderArea.getY();
+        auto bottom = renderArea.getBottom();
+        auto width = renderArea.getWidth();
+
+        juce::Array < float > xs;
+
+        for (auto freqs : frequencies) {
+            auto normX = juce::mapFromLog10(freqs, 20.f, 20000.f);
+            xs.add(left + width * normX);
+        }
+
+
+
+        g.setColour(juce::Colours::ghostwhite);
+
+        for (auto x : xs) {
+           // auto normX = juce::mapFromLog10(freqs, 20.f, 20000.f);
+
+          //  g.drawVerticalLine(getWidth() * normX, 0.f, getHeight());
+            g.drawVerticalLine(x, top, bottom);
+        }
+
+        juce::Array<float> gains{
+
+        -30, -24, -18, -12, -6, 0, 6, 12, 18, 24, 30
+
+        };
+
+        for (auto gain : gains) {
+            auto normY = juce::jmap(gain, -30.f, 30.f, float(bottom), float(top));
+
+          //  g.drawHorizontalLine(normY, 0, getWidth());
+            g.setColour(gain == 0 ? juce::Colour(0u, 172u, 1u) : juce::Colours::grey);
+            g.drawHorizontalLine(normY, left, right);
+        }
+
+
+    }
+
+    juce::Rectangle<int> ResponseCurveComponent::getResponseArea() {
+
+        auto bounds = getRenderArea();
+        bounds.removeFromTop(4);
+        bounds.removeFromBottom(4);
+
+        return bounds;
+
+
+
+    }
+
+    juce::Rectangle<int> ResponseCurveComponent::getRenderArea() {
+
+        auto bounds = getLocalBounds();
+
+       // bounds.reduce(JUCE_LIVE_CONSTANT(5),
+        //    JUCE_LIVE_CONSTANT(5));
+
+        bounds.reduce(12, 12);
+
+        return bounds;
+    }
 
 //==============================================================================
     ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
@@ -285,6 +398,28 @@ void ResponseCurveComponent::timerCallback() {
     highCutSlopeSliderAttachment(audioProcessor.state, "HighCut Slope", highCutSlopeSlider)
 {
  
+        parametricFrequencySlider.labels.add({ 0.f , "20Hz" });
+        parametricFrequencySlider.labels.add({ 1.f , "20kHz" });
+
+        parametricGainSlider.labels.add({ 0.f , "-30dB" });
+        parametricGainSlider.labels.add({ 1.f , "30dB" });
+
+        parametricQualitySlider.labels.add({ 0.f , "0.1" });
+        parametricQualitySlider.labels.add({ 1.f , "15" });
+
+        lowCutFrequencySlider.labels.add({ 0.f , "20Hz" });
+        lowCutFrequencySlider.labels.add({ 1.f , "20kHz" });
+
+        highCutFrequencySlider.labels.add({ 0.f , "20Hz" });
+        highCutFrequencySlider.labels.add({ 1.f , "20kHz" });
+
+        lowCutSlopeSlider.labels.add({ 0.f , "12 dB/Oct" });
+        lowCutSlopeSlider.labels.add({ 1.f , "48 dB/Oct" });
+
+        highCutSlopeSlider.labels.add({ 0.f , "12 dB/Oct" });
+        highCutSlopeSlider.labels.add({ 1.f , "48 dB/Oct" });
+
+
     addAndMakeVisible(parametricFrequencySlider);
     addAndMakeVisible(parametricGainSlider);
     addAndMakeVisible(parametricQualitySlider);

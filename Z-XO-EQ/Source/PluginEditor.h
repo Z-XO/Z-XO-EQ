@@ -35,6 +35,14 @@ struct RotarySliderWithLabels : juce::Slider {
         setLookAndFeel(nullptr);
     }
 
+    struct LabelPositions {
+        float positions;
+        juce::String label;
+
+    };
+
+    juce::Array<LabelPositions> labels;
+
     void paint(juce::Graphics& g) override;
     juce::Rectangle<int> getSliderBounds() const;
     int getTextHeight() const { return 14; }
@@ -63,12 +71,22 @@ struct ResponseCurveComponent : juce::Component, juce::AudioProcessorParameter::
     void timerCallback() override;
 
     void paint(juce::Graphics& g) override;
+    
+    void resized() override;
+
+
 
 private:
     ZXOEQAudioProcessor& audioProcessor;
-    juce::Atomic<bool> shouldUpdateParameters{ false };
+    juce::Atomic<bool> shouldUpdateParameters{ true };
 
     MonoChain MonoChain;
+
+    juce::Image background;
+
+    juce::Rectangle<int> getRenderArea();
+
+    juce::Rectangle<int> getResponseArea();
 
 
 };
