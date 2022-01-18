@@ -286,7 +286,7 @@ void ResponseCurveComponent::timerCallback() {
         g.setColour(juce::Colours::ghostwhite);
         g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 4.f);
 
-        g.setColour(juce::Colours::black);
+        g.setColour(juce::Colours::yellow);
         g.strokePath(responseCurve, juce::PathStrokeType(4.f));
 
 
@@ -303,7 +303,7 @@ void ResponseCurveComponent::timerCallback() {
 
         juce::Array<float> frequencies{ 
         
-        20, 30, 40, 50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000, 20000
+        20,  50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000
         
         
         };
@@ -347,14 +347,82 @@ void ResponseCurveComponent::timerCallback() {
             g.drawHorizontalLine(normY, left, right);
         }
 
+        g.setColour(juce::Colours::yellow);
+        const int fontHeight = 12;
+        g.setFont(fontHeight);
+
+        for (auto j = 0; j < frequencies.size(); ++j) {
+
+            auto freqs = frequencies[j];
+            auto x = xs[j];
+
+
+            bool addK = false;
+            juce::String string;
+
+            if (freqs > 999.f) 
+            {
+                addK = true;
+                freqs /= 1000.f;
+            }
+
+            string << freqs;
+            if (addK == true) 
+            {
+                string << "k";
+            }
+
+            string << "Hz";
+
+            auto textWidth = g.getCurrentFont().getStringWidth(string);
+            
+            
+            juce::Rectangle<int> r;
+            r.setSize(textWidth, fontHeight);
+            r.setCentre(x, 0);
+            r.setY(1);
+
+            g.drawFittedText(string, r, juce::Justification::centred, 1);
+        }
+
+
+        const int dbFont = 8;
+        for (auto gain : gains) {
+            auto normY = juce::jmap(gain, -30.f, 30.f, float(bottom), float(top));
+
+            juce::String string;
+            if (gain > 0) {
+                string << "+";
+
+            }
+            string << gain << "dB";
+       
+            auto textWidth = g.getCurrentFont().getStringWidth(string);
+
+
+            juce::Rectangle<int> r;
+            r.setSize(textWidth, dbFont);
+            r.setX(getWidth() - textWidth - 575);
+            r.setCentre(r.getCentreX(), normY);
+
+            g.setColour(gain == 0 ? juce::Colour(0u, 172u, 1u) : juce::Colours::yellow);
+            g.drawFittedText(string, r, juce::Justification::centred, 1);
+
+
+
+   
+
+        }
+
 
     }
 
     juce::Rectangle<int> ResponseCurveComponent::getResponseArea() {
 
         auto bounds = getRenderArea();
-        bounds.removeFromTop(4);
-        bounds.removeFromBottom(4);
+        bounds.removeFromTop(10);
+        bounds.removeFromBottom(10);
+        //bounds.removeFromRight(10);
 
         return bounds;
 
@@ -366,10 +434,10 @@ void ResponseCurveComponent::timerCallback() {
 
         auto bounds = getLocalBounds();
 
-       // bounds.reduce(JUCE_LIVE_CONSTANT(5),
-        //    JUCE_LIVE_CONSTANT(5));
+        //bounds.reduce(JUCE_LIVE_CONSTANT(5),
+         //    JUCE_LIVE_CONSTANT(5));
 
-        bounds.reduce(12, 12);
+        bounds.reduce(30, 15);
 
         return bounds;
     }
