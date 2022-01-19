@@ -237,9 +237,9 @@ private:
 
     juce::Image background;
 
-    juce::Rectangle<int> getRenderArea();
+    juce::Rectangle<int> getAnalysisArea();
 
-    juce::Rectangle<int> getResponseArea();
+    juce::Rectangle<int> getRenderArea();
 
     SingleChannelSampleFifo<ZXOEQAudioProcessor::BlockType>* leftChannelFifo;
 

@@ -164,7 +164,7 @@ leftChannelFifo(&audioProcessor.leftChannelFifo) {
         parameter->addListener(this);
     }
 
-    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order4096);
+    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order8192);
     monoBuffer.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
 
     updateChain();
@@ -208,7 +208,7 @@ void ResponseCurveComponent::timerCallback() {
 
     // bin width = 48000 / 8192 = 5.85hz
     
-    const auto fftBounds = getRenderArea().toFloat();
+    const auto fftBounds = getAnalysisArea().toFloat();
     const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
     const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
 
@@ -261,7 +261,7 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
         g.drawImage(background, getLocalBounds().toFloat());
 
 
-        auto visualResponse = getRenderArea();
+        auto visualResponse = getAnalysisArea();
 
         auto width = visualResponse.getWidth();
 
@@ -333,24 +333,24 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
             responseCurve.lineTo(visualResponse.getX() + x, map(magnitudes[x]));
         }
 
-        auto xAxis = visualResponse.getX() - 43;
-        auto yAxis = visualResponse.getY() - 6;
+        auto xAxis = visualResponse.getX() - 6;
+        auto yAxis = visualResponse.getY() - 43;
 
        // LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(JUCE_LIVE_CONSTANT(5),
         //    JUCE_LIVE_CONSTANT(5)));
         
-         LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(6, 43));
+        // LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), visualResponse.getY()));
 
 
        g.setColour(juce::Colours::yellow);
-       g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(2.f));
+       g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(1.f));
    
         
         g.setColour(juce::Colours::ghostwhite);
-        g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 4.f);
+        g.drawRoundedRectangle(getAnalysisArea().toFloat(), 2.f, 2.f);
 
         g.setColour(juce::Colours::yellow);
-        g.strokePath(responseCurve, juce::PathStrokeType(4.f));
+        g.strokePath(responseCurve, juce::PathStrokeType(2.5f));
 
 
 
@@ -372,7 +372,7 @@ void ResponseCurveComponent::resized() {
         
         };
 
-        auto renderArea = getResponseArea();
+        auto renderArea = getRenderArea();
         auto left = renderArea.getX();
         auto right = renderArea.getRight();
         auto top = renderArea.getY();
@@ -481,9 +481,9 @@ void ResponseCurveComponent::resized() {
 
     }
 
-juce::Rectangle<int> ResponseCurveComponent::getResponseArea() {
+juce::Rectangle<int> ResponseCurveComponent::getRenderArea() {
 
-        auto bounds = getRenderArea();
+        auto bounds = getAnalysisArea();
         bounds.removeFromTop(10);
         bounds.removeFromBottom(10);
 
@@ -493,14 +493,14 @@ juce::Rectangle<int> ResponseCurveComponent::getResponseArea() {
 
     }
 
-juce::Rectangle<int> ResponseCurveComponent::getRenderArea() {
+juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea() {
 
         auto bounds = getLocalBounds();
 
          //bounds.reduce(JUCE_LIVE_CONSTANT(5),
          //    JUCE_LIVE_CONSTANT(5));
 
-        bounds.reduce(30, 15);
+        //bounds.reduce(30, 15);
 
         return bounds;
     }

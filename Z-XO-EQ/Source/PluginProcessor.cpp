@@ -358,6 +358,8 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     leftChannelFifo.prepare(samplesPerBlock);
     rightChannelFifo.prepare(samplesPerBlock);
 
+
+
 }
 
 void ZXOEQAudioProcessor::releaseResources()
@@ -719,6 +721,7 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     
     
     
+
     juce::dsp::AudioBlock<float> block(buffer);
 
     auto leftB = block.getSingleChannelBlock(0);
