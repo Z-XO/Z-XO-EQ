@@ -156,14 +156,20 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const {
 
 }
 
-
-ResponseCurveComponent::ResponseCurveComponent(ZXOEQAudioProcessor& p) : audioProcessor(p) {
+ResponseCurveComponent::ResponseCurveComponent(ZXOEQAudioProcessor& p) : 
+    audioProcessor(p),
+leftChannelFifo(&audioProcessor.leftChannelFifo) {
     const auto& parameters = audioProcessor.getParameters();
     for (auto parameter : parameters) {
         parameter->addListener(this);
     }
 
-    startTimerHz(60);
+    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order4096);
+    monoBuffer.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
+
+    updateChain();
+
+    startTimerHz(165);
 
 }
 
@@ -175,6 +181,7 @@ ResponseCurveComponent::~ResponseCurveComponent() {
 
 
 }
+
 void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float newValue) {
 
     shouldUpdateParameters.set(true);
@@ -182,37 +189,79 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
 
 void ResponseCurveComponent::timerCallback() {
 
-    if (shouldUpdateParameters.compareAndSetBool(false, true)) {
 
-        auto chainParameters = getChainParameters(audioProcessor.state);
-        auto parametricCoefficients = makeParametricFilter(chainParameters, audioProcessor.getSampleRate());
+    juce::AudioBuffer<float> temporaryIncomingBuffer;
 
-        updateCoefficients(MonoChain.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
+    while (leftChannelFifo->getNumCompleteBuffersAvailable() > 0) {
+        
+        
+        if (leftChannelFifo->getAudioBuffer(temporaryIncomingBuffer)) {
+            auto size = temporaryIncomingBuffer.getNumSamples();
+
+            juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, 0), monoBuffer.getReadPointer(0, size), monoBuffer.getNumSamples() - size);
+
+            juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size), temporaryIncomingBuffer.getReadPointer(0, 0), size);
+
+            leftChannelFFTDataGenerator.produceFFTDataForRendering(monoBuffer, -100.f);
+        }
+    }
+
+    // bin width = 48000 / 8192 = 5.85hz
+    
+    const auto fftBounds = getRenderArea().toFloat();
+    const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
+    const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
 
 
-        auto lowCutCoefficients = makeLowCutFilter(chainParameters, audioProcessor.getSampleRate());
-        auto highCutCoefficients = makeHighCutFilter(chainParameters, audioProcessor.getSampleRate());
+    while (leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0) {
 
-        updateCutFilter(MonoChain.get<ChainLocations::LowCut>(), lowCutCoefficients, chainParameters.lowCutSlope);
-        updateCutFilter(MonoChain.get<ChainLocations::HighCut>(), highCutCoefficients, chainParameters.highCutSlope);
-
-        repaint();
+        std::vector<float> fftData;
+        if (leftChannelFFTDataGenerator.getFFTData(fftData)) {
+            pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -100.f);
+        }
 
     }
+
+    while (pathProducer.getNumPathsAvailable()) {
+
+        pathProducer.getPath(LeftChannelFFTPath);
+    }
+
+
+
+    if (shouldUpdateParameters.compareAndSetBool(false, true)) {
+
+        updateChain();
+
+
+    }
+    
+    repaint();
 }
 
-    void ResponseCurveComponent::paint (juce::Graphics & g){
+void ResponseCurveComponent::updateChain(){
+
+    auto chainParameters = getChainParameters(audioProcessor.state);
+    auto parametricCoefficients = makeParametricFilter(chainParameters, audioProcessor.getSampleRate());
+
+    updateCoefficients(MonoChain.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
+
+
+    auto lowCutCoefficients = makeLowCutFilter(chainParameters, audioProcessor.getSampleRate());
+    auto highCutCoefficients = makeHighCutFilter(chainParameters, audioProcessor.getSampleRate());
+
+    updateCutFilter(MonoChain.get<ChainLocations::LowCut>(), lowCutCoefficients, chainParameters.lowCutSlope);
+    updateCutFilter(MonoChain.get<ChainLocations::HighCut>(), highCutCoefficients, chainParameters.highCutSlope);
+}
+
+void ResponseCurveComponent::paint (juce::Graphics & g){
         // (Our component is opaque, so we must completely fill the background with a solid colour)
         g.fillAll(juce::Colours::grey);
 
         g.drawImage(background, getLocalBounds().toFloat());
 
 
-       // auto visualResponse = getLocalBounds();
-
-      //  auto visualResponse = getRenderArea();
-
-        auto visualResponse = getResponseArea();
+        auto visualResponse = getRenderArea();
 
         auto width = visualResponse.getWidth();
 
@@ -221,6 +270,7 @@ void ResponseCurveComponent::timerCallback() {
         auto& parametricChain = MonoChain.get<ChainLocations::Parametric>();
 
         auto sampleRate = audioProcessor.getSampleRate();
+
 
 
 
@@ -283,6 +333,19 @@ void ResponseCurveComponent::timerCallback() {
             responseCurve.lineTo(visualResponse.getX() + x, map(magnitudes[x]));
         }
 
+        auto xAxis = visualResponse.getX() - 43;
+        auto yAxis = visualResponse.getY() - 6;
+
+       // LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(JUCE_LIVE_CONSTANT(5),
+        //    JUCE_LIVE_CONSTANT(5)));
+        
+         LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(6, 43));
+
+
+       g.setColour(juce::Colours::yellow);
+       g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(2.f));
+   
+        
         g.setColour(juce::Colours::ghostwhite);
         g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 4.f);
 
@@ -290,10 +353,11 @@ void ResponseCurveComponent::timerCallback() {
         g.strokePath(responseCurve, juce::PathStrokeType(4.f));
 
 
+
     }
 
 
-    void ResponseCurveComponent::resized() {
+void ResponseCurveComponent::resized() {
 
   
 
@@ -402,7 +466,7 @@ void ResponseCurveComponent::timerCallback() {
 
             juce::Rectangle<int> r;
             r.setSize(textWidth, dbFont);
-            r.setX(getWidth() - textWidth - 575);
+            r.setX(getWidth() - textWidth - 1);
             r.setCentre(r.getCentreX(), normY);
 
             g.setColour(gain == 0 ? juce::Colour(0u, 172u, 1u) : juce::Colours::yellow);
@@ -417,12 +481,11 @@ void ResponseCurveComponent::timerCallback() {
 
     }
 
-    juce::Rectangle<int> ResponseCurveComponent::getResponseArea() {
+juce::Rectangle<int> ResponseCurveComponent::getResponseArea() {
 
         auto bounds = getRenderArea();
         bounds.removeFromTop(10);
         bounds.removeFromBottom(10);
-        //bounds.removeFromRight(10);
 
         return bounds;
 
@@ -430,11 +493,11 @@ void ResponseCurveComponent::timerCallback() {
 
     }
 
-    juce::Rectangle<int> ResponseCurveComponent::getRenderArea() {
+juce::Rectangle<int> ResponseCurveComponent::getRenderArea() {
 
         auto bounds = getLocalBounds();
 
-        //bounds.reduce(JUCE_LIVE_CONSTANT(5),
+         //bounds.reduce(JUCE_LIVE_CONSTANT(5),
          //    JUCE_LIVE_CONSTANT(5));
 
         bounds.reduce(30, 15);
@@ -442,8 +505,9 @@ void ResponseCurveComponent::timerCallback() {
         return bounds;
     }
 
+
 //==============================================================================
-    ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
+ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
         : AudioProcessorEditor(&p), audioProcessor(p), 
         parametricFrequencySlider(*audioProcessor.state.getParameter("Parametric Frequency"), "Hz"),
         parametricGainSlider(*audioProcessor.state.getParameter("Parametric Gain"), "dB"),

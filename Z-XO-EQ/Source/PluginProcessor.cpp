@@ -355,6 +355,9 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     }
     }
 
+    leftChannelFifo.prepare(samplesPerBlock);
+    rightChannelFifo.prepare(samplesPerBlock);
+
 }
 
 void ZXOEQAudioProcessor::releaseResources()
@@ -595,6 +598,7 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         break;
 
     }
+
     }
 
     // FOR HIGH CUT ( LOW PASS HIGH ORDER)
@@ -725,6 +729,9 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     left.process(leftContext);
     right.process(rightContext);
+
+    leftChannelFifo.update(buffer);
+    rightChannelFifo.update(buffer);
 
 
 }
