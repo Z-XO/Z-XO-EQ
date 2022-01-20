@@ -259,6 +259,7 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
         g.fillAll(juce::Colours::grey);
 
         g.drawImage(background, getLocalBounds().toFloat());
+        
 
 
         auto visualResponse = getAnalysisArea();
@@ -339,11 +340,11 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
        // LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(JUCE_LIVE_CONSTANT(5),
         //    JUCE_LIVE_CONSTANT(5)));
         
-        // LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), visualResponse.getY()));
+        LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), visualResponse.getY()));
 
 
-       g.setColour(juce::Colours::yellow);
-       g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(1.f));
+        g.setColour(juce::Colours::yellow);
+        g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(1.f));
    
         
         g.setColour(juce::Colours::ghostwhite);
@@ -362,12 +363,22 @@ void ResponseCurveComponent::resized() {
   
 
         background = juce::Image(juce::Image::PixelFormat::RGB, getWidth(), getHeight(), true);
-
+        
+ 
         juce::Graphics g(background);
 
         juce::Array<float> frequencies{ 
         
-        20,  50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000
+        20, 
+        50, 
+        100, 
+        200, 
+        500, 
+        1000, 
+        2000, 
+        5000, 
+        10000, 
+        20000
         
         
         };
@@ -391,9 +402,6 @@ void ResponseCurveComponent::resized() {
         g.setColour(juce::Colours::ghostwhite);
 
         for (auto x : xs) {
-           // auto normX = juce::mapFromLog10(freqs, 20.f, 20000.f);
-
-          //  g.drawVerticalLine(getWidth() * normX, 0.f, getHeight());
             g.drawVerticalLine(x, top, bottom);
         }
 
@@ -406,7 +414,6 @@ void ResponseCurveComponent::resized() {
         for (auto gain : gains) {
             auto normY = juce::jmap(gain, -30.f, 30.f, float(bottom), float(top));
 
-          //  g.drawHorizontalLine(normY, 0, getWidth());
             g.setColour(gain == 0 ? juce::Colour(0u, 172u, 1u) : juce::Colours::grey);
             g.drawHorizontalLine(normY, left, right);
         }
@@ -466,7 +473,7 @@ void ResponseCurveComponent::resized() {
 
             juce::Rectangle<int> r;
             r.setSize(textWidth, dbFont);
-            r.setX(getWidth() - textWidth - 1);
+            r.setX(getWidth() - textWidth - 725);
             r.setCentre(r.getCentreX(), normY);
 
             g.setColour(gain == 0 ? juce::Colour(0u, 172u, 1u) : juce::Colours::yellow);
@@ -486,6 +493,11 @@ juce::Rectangle<int> ResponseCurveComponent::getRenderArea() {
         auto bounds = getAnalysisArea();
         bounds.removeFromTop(10);
         bounds.removeFromBottom(10);
+        bounds.removeFromLeft(15);
+        bounds.removeFromRight(15);
+       // bounds.removeFromRight(5);
+        //bounds.removeFromLeft(12);
+        //bounds.removeFromLeft(10);
 
         return bounds;
 
@@ -500,7 +512,9 @@ juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea() {
          //bounds.reduce(JUCE_LIVE_CONSTANT(5),
          //    JUCE_LIVE_CONSTANT(5));
 
-        //bounds.reduce(30, 15);
+      // bounds.reduce(35, 0);
+        bounds.removeFromTop(15);
+        //bounds.reduce(10, 0);
 
         return bounds;
     }
@@ -564,7 +578,7 @@ ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
 
     addAndMakeVisible(responseCurveComponent);
 
-    setSize (600, 800);
+    setSize (800, 900);
 }
 
 ZXOEQAudioProcessorEditor::~ZXOEQAudioProcessorEditor()
