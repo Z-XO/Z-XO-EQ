@@ -10,6 +10,8 @@
 #include "PluginEditor.h"
 
 
+
+
 void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float roataryStartAngle, float rotaryEndAngle, juce::Slider& slider) {
 
 
@@ -44,12 +46,14 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
         g.setColour(juce::Colours::steelblue);
         g.fillRect(r);
 
-        g.setColour(juce::Colours::white);
+        g.setColour(juce::Colours::ghostwhite);
         g.drawFittedText(text, r.toNearestInt(), juce::Justification::centred, 1);
   
     
     }
 
+    //Image background = juce::ImageCache::getFromMemory(juce::BinaryData::"K", BinaryData::filename_extSize);
+    //g.drawImageAt(background, 0, 0);
 
     juce::Path p;
     auto pointerLength = radius * 0.53f;
@@ -158,14 +162,18 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const {
 
 ResponseCurveComponent::ResponseCurveComponent(ZXOEQAudioProcessor& p) : 
     audioProcessor(p),
-leftChannelFifo(&audioProcessor.leftChannelFifo) {
+leftChannelFifo(&audioProcessor.leftChannelFifo),
+rightChannelFifo(&audioProcessor.rightChannelFifo) {
     const auto& parameters = audioProcessor.getParameters();
     for (auto parameter : parameters) {
         parameter->addListener(this);
     }
 
-    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order8192);
-    monoBuffer.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
+    leftChannelFFTDataGenerator.changeOrder(FFTOrder::order2048);
+    monoBufferL.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
+
+    rightChannelFFTDataGenerator.changeOrder(FFTOrder::order2048);
+    monoBufferR.setSize(1,rightChannelFFTDataGenerator.getFFTSize());
 
     updateChain();
 
@@ -189,42 +197,81 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
 
 void ResponseCurveComponent::timerCallback() {
 
+    const auto fftBounds = getAnalysisArea().toFloat();
+    juce::AudioBuffer<float> temporaryIncomingBufferL;
+    juce::AudioBuffer<float> temporaryIncomingBufferR;
 
-    juce::AudioBuffer<float> temporaryIncomingBuffer;
+    // LEFT
 
     while (leftChannelFifo->getNumCompleteBuffersAvailable() > 0) {
         
         
-        if (leftChannelFifo->getAudioBuffer(temporaryIncomingBuffer)) {
-            auto size = temporaryIncomingBuffer.getNumSamples();
+        if (leftChannelFifo->getAudioBuffer(temporaryIncomingBufferL)) {
+            auto sizeL = temporaryIncomingBufferL.getNumSamples();
 
-            juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, 0), monoBuffer.getReadPointer(0, size), monoBuffer.getNumSamples() - size);
+            juce::FloatVectorOperations::copy(monoBufferL.getWritePointer(0, 0), monoBufferL.getReadPointer(0, sizeL), monoBufferL.getNumSamples() - sizeL);
 
-            juce::FloatVectorOperations::copy(monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size), temporaryIncomingBuffer.getReadPointer(0, 0), size);
+            juce::FloatVectorOperations::copy(monoBufferL.getWritePointer(0, monoBufferL.getNumSamples() - sizeL), temporaryIncomingBufferL.getReadPointer(0, 0), sizeL);
 
-            leftChannelFFTDataGenerator.produceFFTDataForRendering(monoBuffer, -100.f);
+            leftChannelFFTDataGenerator.produceFFTDataForRendering(monoBufferL, -100.f);
         }
     }
 
     // bin width = 48000 / 8192 = 5.85hz
     
-    const auto fftBounds = getAnalysisArea().toFloat();
-    const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
-    const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
+    const auto fftSizeL = leftChannelFFTDataGenerator.getFFTSize();
+    const auto binWidthL = audioProcessor.getSampleRate() / (double)fftSizeL;
 
 
     while (leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0) {
 
-        std::vector<float> fftData;
-        if (leftChannelFFTDataGenerator.getFFTData(fftData)) {
-            pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -100.f);
+        std::vector<float> fftDataL;
+        if (leftChannelFFTDataGenerator.getFFTData(fftDataL)) {
+            pathProducerL.generatePath(fftDataL, fftBounds, fftSizeL, binWidthL, -100.f);
         }
 
     }
 
-    while (pathProducer.getNumPathsAvailable()) {
+    while (pathProducerL.getNumPathsAvailable()) {
 
-        pathProducer.getPath(LeftChannelFFTPath);
+        pathProducerL.getPath(LeftChannelFFTPath);
+    }
+
+    // RIGHT
+
+    while (rightChannelFifo->getNumCompleteBuffersAvailable() > 0) {
+
+
+        if (rightChannelFifo->getAudioBuffer(temporaryIncomingBufferR)) {
+            auto sizeR = temporaryIncomingBufferR.getNumSamples();
+            
+            juce::FloatVectorOperations::copy(monoBufferR.getWritePointer(0,0), monoBufferR.getReadPointer(0, sizeR), monoBufferR.getNumSamples() - sizeR);
+
+            juce::FloatVectorOperations::copy(monoBufferR.getWritePointer(0, monoBufferR.getNumSamples() - sizeR), temporaryIncomingBufferR.getReadPointer(0, 0), sizeR);
+
+            rightChannelFFTDataGenerator.produceFFTDataForRendering(monoBufferR, -100.f);
+        }
+    }
+
+    // bin width = 48000 / 8192 = 5.85hz
+
+
+    const auto fftSizeR = rightChannelFFTDataGenerator.getFFTSize();
+    const auto binWidthR = audioProcessor.getSampleRate() / (double)fftSizeR;
+
+
+    while (rightChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0) {
+
+        std::vector<float> fftDataR;
+        if (rightChannelFFTDataGenerator.getFFTData(fftDataR)) {
+            pathProducerR.generatePath(fftDataR, fftBounds, fftSizeR, binWidthR, -100.f);
+        }
+
+    }
+
+    while (pathProducerR.getNumPathsAvailable()) {
+
+        pathProducerR.getPath(RightChannelFFTPath);
     }
 
 
@@ -346,6 +393,12 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
         g.setColour(juce::Colours::yellow);
         g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(1.f));
    
+
+        RightChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), visualResponse.getY()));
+        
+        g.setColour(juce::Colours::red);
+        g.strokePath(RightChannelFFTPath, juce::PathStrokeType(1.f));
+
         
         g.setColour(juce::Colours::ghostwhite);
         g.drawRoundedRectangle(getAnalysisArea().toFloat(), 2.f, 2.f);

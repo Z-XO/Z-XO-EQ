@@ -788,9 +788,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZXOEQAudioProcessor::createP
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
 
-    layout.add(std::make_unique<juce::AudioParameterFloat>("LowCut Frequency", "LowCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20.f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("LowCut Frequency", "LowCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, .2f), 20.f));
 
-    layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Frequency", "HighCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20000.f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Frequency", "HighCut Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.8f), 20000.f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>("Parametric Frequency", "Parametric Frequency", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 750.f));
 

@@ -242,15 +242,21 @@ private:
     juce::Rectangle<int> getRenderArea();
 
     SingleChannelSampleFifo<ZXOEQAudioProcessor::BlockType>* leftChannelFifo;
+    SingleChannelSampleFifo<ZXOEQAudioProcessor::BlockType>* rightChannelFifo;
 
-    juce::AudioBuffer<float> monoBuffer;
+
+    juce::AudioBuffer<float> monoBufferL;
+    juce::AudioBuffer<float> monoBufferR;
 
     FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
+    FFTDataGenerator<std::vector<float>> rightChannelFFTDataGenerator;
 
-    AnalyzerPathGenerator<juce::Path> pathProducer;
+
+    AnalyzerPathGenerator<juce::Path> pathProducerL;
+    AnalyzerPathGenerator<juce::Path> pathProducerR;
 
     juce::Path LeftChannelFFTPath;
-
+    juce::Path RightChannelFFTPath;
 
 };
 
