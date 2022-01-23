@@ -177,7 +177,7 @@ rightChannelFifo(&audioProcessor.rightChannelFifo) {
 
     updateChain();
 
-    startTimerHz(165);
+    startTimerHz(60);
 
 }
 
@@ -382,21 +382,19 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
         }
 
         auto xAxis = visualResponse.getX() - 6;
-        auto yAxis = visualResponse.getY() - 43;
+        auto yAxis = visualResponse.getY() - 11;
 
-       // LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(JUCE_LIVE_CONSTANT(5),
-        //    JUCE_LIVE_CONSTANT(5)));
         
-        LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), visualResponse.getY()));
+        LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), yAxis));
 
 
-        g.setColour(juce::Colours::yellow);
+        g.setColour(juce::Colours::green);
         g.strokePath(LeftChannelFFTPath, juce::PathStrokeType(1.f));
    
 
-        RightChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), visualResponse.getY()));
+        RightChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), yAxis));
         
-        g.setColour(juce::Colours::red);
+        g.setColour(juce::Colours::purple);
         g.strokePath(RightChannelFFTPath, juce::PathStrokeType(1.f));
 
         
@@ -594,7 +592,13 @@ ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
     lowCutFrequencySliderAttachment(audioProcessor.state, "LowCut Frequency", lowCutFrequencySlider),
     lowCutSlopeSliderAttachment(audioProcessor.state, "LowCut Slope", lowCutSlopeSlider),
     highCutFrequencySliderAttachment(audioProcessor.state, "HighCut Frequency", highCutFrequencySlider),
-    highCutSlopeSliderAttachment(audioProcessor.state, "HighCut Slope", highCutSlopeSlider)
+    highCutSlopeSliderAttachment(audioProcessor.state, "HighCut Slope", highCutSlopeSlider),
+
+    lowCutBypassButtonAttachment(audioProcessor.state, "LowCut Bypass", lowCutBypassButton),
+    highCutBypassButtonAttachment(audioProcessor.state, "HighCut Bypass", highCutBypassButton),
+    parametricBypassButtonAttachment(audioProcessor.state, "Parametric Bypass", parametricBypassButton),
+    analyzerEnableButtonAttachment(audioProcessor.state, "Analyzer Enabled", analyzerEnableButton)
+
 {
  
         parametricFrequencySlider.labels.add({ 0.f , "20Hz" });
@@ -631,6 +635,12 @@ ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
 
     addAndMakeVisible(responseCurveComponent);
 
+    addAndMakeVisible(lowCutBypassButton);
+    addAndMakeVisible(highCutBypassButton);
+    addAndMakeVisible(parametricBypassButton);
+    addAndMakeVisible(analyzerEnableButton);
+
+
     setSize (800, 900);
 }
 
@@ -658,12 +668,18 @@ void ZXOEQAudioProcessorEditor::resized()
     // HighCut, Right side of lower half
     auto highCutLocation = bounds.removeFromRight(bounds.getWidth() * 0.5);
 
+    lowCutBypassButton.setBounds(lowCutLocation.removeFromBottom(25));
+    highCutBypassButton.setBounds(highCutLocation.removeFromBottom(25));
+
+
     lowCutFrequencySlider.setBounds(lowCutLocation.removeFromTop(lowCutLocation.getHeight() * .50));
     lowCutSlopeSlider.setBounds(lowCutLocation);
     highCutFrequencySlider.setBounds(highCutLocation.removeFromTop(highCutLocation.getHeight() * .50));
     highCutSlopeSlider.setBounds(highCutLocation);
     
     // Remaining middle for Parametric EQ
+    
+    parametricBypassButton.setBounds(bounds.removeFromBottom(25));
     
     parametricFrequencySlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
     parametricGainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.50));

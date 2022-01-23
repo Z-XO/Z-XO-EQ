@@ -28,6 +28,10 @@ struct ChainParameters {
     float lowCutFrequency{ 0 };
     float highCutFrequency{ 0 };
 
+    bool lowCutBypass{ false };
+    bool parametricBypass{ false };
+    bool highCutBypass{ false };
+
     SlopeValues  lowCutSlope{ SlopeValues::Slope_12dB };
     SlopeValues  highCutSlope{ SlopeValues::Slope_12dB };
 

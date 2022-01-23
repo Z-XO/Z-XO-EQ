@@ -301,6 +301,15 @@ private:
     juce::AudioProcessorValueTreeState::SliderAttachment lowCutSlopeSliderAttachment;
     juce::AudioProcessorValueTreeState::SliderAttachment highCutSlopeSliderAttachment;
 
+    juce::ToggleButton lowCutBypassButton;
+    juce::ToggleButton highCutBypassButton;
+    juce::ToggleButton parametricBypassButton;
+    juce::ToggleButton analyzerEnableButton;
+
+    juce::AudioProcessorValueTreeState::ButtonAttachment lowCutBypassButtonAttachment;
+    juce::AudioProcessorValueTreeState::ButtonAttachment highCutBypassButtonAttachment;
+    juce::AudioProcessorValueTreeState::ButtonAttachment parametricBypassButtonAttachment;
+    juce::AudioProcessorValueTreeState::ButtonAttachment analyzerEnableButtonAttachment;
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ZXOEQAudioProcessorEditor)

@@ -116,8 +116,14 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
         juce::Decibels::decibelsToGain(chainParameters.parametricGain));
 
 
+
+
+
     *left.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
     *right.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
+
+    left.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
+    right.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
 
     // Slope Choice for low cut coefficients
     // Slope choice of 0 corresponds to 12 dB per octave translating to an order of 2
@@ -131,6 +137,7 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     
     auto& leftLowCut = left.get<ChainLocations::LowCut>();
  
+    
 
     // bypass positions in chain
 
@@ -138,7 +145,9 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     leftLowCut.setBypassed<1>(true);
     leftLowCut.setBypassed<2>(true);
     leftLowCut.setBypassed<3>(true);
-   // leftLowCut.setBypassed<4>(true); <-- array out of index issue
+
+
+    left.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
 
     switch (chainParameters.lowCutSlope) {
 
@@ -188,13 +197,17 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     auto& rightLowCut = right.get<ChainLocations::LowCut>();
 
+
+
     // bypass positions in chain
 
     rightLowCut.setBypassed<0>(true);
     rightLowCut.setBypassed<1>(true);
     rightLowCut.setBypassed<2>(true);
     rightLowCut.setBypassed<3>(true);
-    // leftLowCut.setBypassed<4>(true); <-- array out of index issue
+    
+
+    right.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
 
     switch (chainParameters.lowCutSlope) {
 
@@ -249,10 +262,15 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     auto& leftHighCut = left.get<ChainLocations::HighCut>();
 
+   
+  
+    
     leftHighCut.setBypassed<0>(true);
     leftHighCut.setBypassed<1>(true);
     leftHighCut.setBypassed<2>(true);
     leftHighCut.setBypassed<3>(true);
+
+    left.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
 
 
     switch (chainParameters.highCutSlope) {
@@ -303,10 +321,14 @@ void ZXOEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     auto& rightHighCut = right.get<ChainLocations::HighCut>();
 
+   
+
     rightHighCut.setBypassed<0>(true);
     rightHighCut.setBypassed<1>(true);
     rightHighCut.setBypassed<2>(true);
     rightHighCut.setBypassed<3>(true);
+
+    right.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
 
 
     switch (chainParameters.highCutSlope) {
@@ -409,6 +431,10 @@ void ZXOEQAudioProcessor::updateParametricFilter(const ChainParameters & chainPa
     auto parametricCoefficients = makeParametricFilter(chainParameters, getSampleRate());
 
 
+    //left.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
+    //right.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
+
+
     updateCoefficients(left.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
     updateCoefficients(right.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
 }
@@ -424,6 +450,10 @@ void ZXOEQAudioProcessor::updateLowCutFilters(const ChainParameters &chainParame
     auto& leftLowCut = left.get<ChainLocations::LowCut>();
     auto& rightLowCut = right.get<ChainLocations::LowCut>();
 
+    //left.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
+    //right.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
+
+
     updateCutFilter(rightLowCut, lowCutCoeffs, chainParameters.lowCutSlope);
     updateCutFilter(leftLowCut, lowCutCoeffs, chainParameters.lowCutSlope);
 }
@@ -433,6 +463,9 @@ void ZXOEQAudioProcessor::updateHighCutFilters(const ChainParameters& chainParam
     auto highCutCoeffs = makeHighCutFilter(chainParameters, getSampleRate());
     auto& leftHighCut = left.get<ChainLocations::HighCut>();
     auto& rightHighCut = right.get<ChainLocations::HighCut>();
+
+   // left.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
+   // right.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
 
     updateCutFilter(rightHighCut, highCutCoeffs, chainParameters.highCutSlope);
     updateCutFilter(leftHighCut, highCutCoeffs, chainParameters.highCutSlope);
@@ -461,18 +494,6 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    //for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    //{
-    //    auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    // }
     
 
     auto chainParameters = getChainParameters(state);
@@ -492,13 +513,17 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     auto& leftLowCut = left.get<ChainLocations::LowCut>();
 
+
     // bypass positions in chain
 
     leftLowCut.setBypassed<0>(true);
     leftLowCut.setBypassed<1>(true);
     leftLowCut.setBypassed<2>(true);
     leftLowCut.setBypassed<3>(true);
-    // leftLowCut.setBypassed<4>(true); <-- array out of index issue
+    
+    left.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
+
+
 
     switch (chainParameters.lowCutSlope) {
 
@@ -548,6 +573,9 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     auto& rightLowCut = right.get<ChainLocations::LowCut>();
 
+    
+
+
     // bypass positions in chain
 
     rightLowCut.setBypassed<0>(true);
@@ -555,6 +583,8 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     rightLowCut.setBypassed<2>(true);
     rightLowCut.setBypassed<3>(true);
     // leftLowCut.setBypassed<4>(true); <-- array out of index issue
+
+    right.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
 
     switch (chainParameters.lowCutSlope) {
 
@@ -610,11 +640,15 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     auto& leftHighCut = left.get<ChainLocations::HighCut>();
 
+   
+
+
     leftHighCut.setBypassed<0>(true);
     leftHighCut.setBypassed<1>(true);
     leftHighCut.setBypassed<2>(true);
     leftHighCut.setBypassed<3>(true);
 
+    left.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
 
     switch (chainParameters.highCutSlope) {
 
@@ -664,10 +698,15 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     auto& rightHighCut = right.get<ChainLocations::HighCut>();
 
+    
+
+
     rightHighCut.setBypassed<0>(true);
     rightHighCut.setBypassed<1>(true);
     rightHighCut.setBypassed<2>(true);
     rightHighCut.setBypassed<3>(true);
+
+    right.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
 
 
     switch (chainParameters.highCutSlope) {
@@ -720,7 +759,10 @@ void ZXOEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     *right.get<ChainLocations::Parametric>().coefficients = *parametricCoeffs;
     
     
-    
+
+    left.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
+    right.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
+
 
     juce::dsp::AudioBlock<float> block(buffer);
 
@@ -778,6 +820,11 @@ ChainParameters getChainParameters(juce::AudioProcessorValueTreeState& state) {
     parameters.parametricGain = state.getRawParameterValue("Parametric Gain")->load();
     parameters.parametricQuality = state.getRawParameterValue("Parametric Quality")->load();
 
+    parameters.lowCutBypass = state.getRawParameterValue("LowCut Bypass")->load() > 0.5f;
+    parameters.highCutBypass = state.getRawParameterValue("HighCut Bypass")->load() > 0.5f;
+
+    parameters.parametricBypass = state.getRawParameterValue("Parametric Bypass")->load() > 0.5f;
+
 
     return parameters;
 }
@@ -811,6 +858,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZXOEQAudioProcessor::createP
 
     layout.add(std::make_unique<juce::AudioParameterChoice>("LowCut Slope", "LowCut Slope", values, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("HighCut Slope", "HighCut Slope", values, 0));
+
+
+    layout.add(std::make_unique<juce::AudioParameterBool>("Analyzer Enabled", "Analyzer Enabled", true));
+
+    
+    layout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypass", "LowCut Bypass", false));
+    layout.add(std::make_unique<juce::AudioParameterBool>("Parametric Bypass", "Parametric Bypass", false));
+
+    layout.add(std::make_unique<juce::AudioParameterBool>("HighCut Bypass", "HighCut Bypass", false));
 
 
     return layout;
