@@ -14,6 +14,8 @@
 
 void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float roataryStartAngle, float rotaryEndAngle, juce::Slider& slider) {
 
+    auto enabled = slider.isEnabled();
+
 
     auto bounds = juce::Rectangle<float>(x, y, width, height);
 
@@ -26,11 +28,11 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     auto angle = roataryStartAngle + sliderPosProportional * (rotaryEndAngle - roataryStartAngle);
 
     // fill
-    g.setColour(juce::Colours::steelblue);
+    g.setColour(enabled ?juce::Colours::steelblue : juce::Colours::dimgrey);
     g.fillEllipse(rx, ry, rw, rw);
 
     // outline
-    g.setColour(juce::Colours::ghostwhite);
+    g.setColour(enabled ? juce::Colours::ghostwhite : juce::Colours::dimgrey);
     g.drawEllipse(rx, ry, rw, rw, 2.0f);
 
     juce::Rectangle<float> r;
@@ -43,10 +45,10 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
 
         r.setSize(stringWidth + 4, rswl->getTextHeight() + 2);
         r.setCentre(bounds.getCentre());
-        g.setColour(juce::Colours::steelblue);
+        g.setColour(enabled ? juce::Colours::steelblue : juce::Colours::dimgrey);
         g.fillRect(r);
 
-        g.setColour(juce::Colours::ghostwhite);
+        g.setColour(enabled ? juce::Colours::ghostwhite : juce::Colours::darkslategrey);
         g.drawFittedText(text, r.toNearestInt(), juce::Justification::centred, 1);
   
     
@@ -62,10 +64,51 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
 
     // pointer
-    g.setColour(juce::Colours::yellow);
+    g.setColour(enabled ? juce::Colours::yellow : juce::Colours::darkslategrey);
     g.fillPath(p);
 
+
+
+
 }
+
+void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggleButton, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) {
+
+    juce::Path buttonSwitch;
+
+    auto bounds = toggleButton.getLocalBounds();
+
+
+    g.setColour(juce::Colours::ghostwhite);
+    g.drawRect(bounds);
+
+    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight()) - 4;
+
+    auto r = bounds.withSizeKeepingCentre(size, size).toFloat();
+
+    float angle = 30.f;
+
+    size -= 6;
+
+    buttonSwitch.addCentredArc(r.getCentreX(), r.getCentreY(), size * .5, size * .5, 0.f, juce::degreesToRadians(angle), juce::degreesToRadians(360.f - angle), true);
+
+    buttonSwitch.startNewSubPath(r.getCentreX(), r.getY());
+    buttonSwitch.lineTo(r.getCentre());
+
+    juce::PathStrokeType pst(2.f, juce::PathStrokeType::JointStyle::curved);
+
+    auto color = toggleButton.getToggleState() ? juce::Colours::lightslategrey : juce::Colour(0u, 172u, 1u);
+
+    g.setColour(color);
+
+
+    g.strokePath(buttonSwitch, pst);
+
+    g.drawEllipse(r, 2);
+
+
+}
+
 
 juce::String RotarySliderWithLabels::getDisplayString() const {
     if (auto* choiceParameter = dynamic_cast<juce::AudioParameterChoice*>(audioParam)) {
@@ -289,6 +332,13 @@ void ResponseCurveComponent::timerCallback() {
 void ResponseCurveComponent::updateChain(){
 
     auto chainParameters = getChainParameters(audioProcessor.state);
+
+    MonoChain.setBypassed<ChainLocations::LowCut>(chainParameters.lowCutBypass);
+    MonoChain.setBypassed<ChainLocations::HighCut>(chainParameters.highCutBypass);
+    MonoChain.setBypassed<ChainLocations::Parametric>(chainParameters.parametricBypass);
+
+
+
     auto parametricCoefficients = makeParametricFilter(chainParameters, audioProcessor.getSampleRate());
 
     updateCoefficients(MonoChain.get<ChainLocations::Parametric>().coefficients, parametricCoefficients);
@@ -334,32 +384,39 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
                 magnitude *= parametricChain.coefficients->getMagnitudeForFrequency(frequency, sampleRate);
             }
 
-            if (!lowCutChain.isBypassed<0>()) {
-                magnitude *= lowCutChain.get<0>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
-            if (!lowCutChain.isBypassed<1>()) {
-                magnitude *= lowCutChain.get<1>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
-            if (!lowCutChain.isBypassed<2>()) {
-                magnitude *= lowCutChain.get<2>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
-            if (!lowCutChain.isBypassed<3>()) {
-                magnitude *= lowCutChain.get<3>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+            if (! MonoChain.isBypassed<ChainLocations::LowCut>()) {
+
+                if (!lowCutChain.isBypassed<0>()) {
+                    magnitude *= lowCutChain.get<0>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+                if (!lowCutChain.isBypassed<1>()) {
+                    magnitude *= lowCutChain.get<1>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+                if (!lowCutChain.isBypassed<2>()) {
+                    magnitude *= lowCutChain.get<2>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+                if (!lowCutChain.isBypassed<3>()) {
+                    magnitude *= lowCutChain.get<3>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+
             }
 
-            if (!highCutChain.isBypassed<0>()) {
-                magnitude *= highCutChain.get<0>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
-            if (!highCutChain.isBypassed<1>()) {
-                magnitude *= highCutChain.get<1>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
-            if (!highCutChain.isBypassed<2>()) {
-                magnitude *= highCutChain.get<2>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
-            if (!highCutChain.isBypassed<3>()) {
-                magnitude *= highCutChain.get<3>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
-            }
+            if (! MonoChain.isBypassed<ChainLocations::HighCut>()) {
 
+                if (!highCutChain.isBypassed<0>()) {
+                    magnitude *= highCutChain.get<0>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+                if (!highCutChain.isBypassed<1>()) {
+                    magnitude *= highCutChain.get<1>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+                if (!highCutChain.isBypassed<2>()) {
+                    magnitude *= highCutChain.get<2>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+                if (!highCutChain.isBypassed<3>()) {
+                    magnitude *= highCutChain.get<3>().coefficients->getMagnitudeForFrequency(frequency, sampleRate);
+                }
+
+            }
             magnitudes[i] = juce::Decibels::gainToDecibels(magnitude);
 
 
@@ -385,6 +442,8 @@ void ResponseCurveComponent::paint (juce::Graphics & g){
         auto yAxis = visualResponse.getY() - 11;
 
         
+
+
         LeftChannelFFTPath.applyTransform(juce::AffineTransform().translation(visualResponse.getX(), yAxis));
 
 
@@ -573,15 +632,15 @@ juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea() {
 
 //==============================================================================
 ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
-        : AudioProcessorEditor(&p), audioProcessor(p), 
-        parametricFrequencySlider(*audioProcessor.state.getParameter("Parametric Frequency"), "Hz"),
-        parametricGainSlider(*audioProcessor.state.getParameter("Parametric Gain"), "dB"),
-        parametricQualitySlider(*audioProcessor.state.getParameter("Parametric Quality"), ""),
-        lowCutFrequencySlider(*audioProcessor.state.getParameter("LowCut Frequency"), "Hz"),
-        lowCutSlopeSlider(*audioProcessor.state.getParameter("LowCut Slope"), "dB/Oct"),
-        highCutFrequencySlider(*audioProcessor.state.getParameter("HighCut Frequency"), "Hz"),
-        highCutSlopeSlider(*audioProcessor.state.getParameter("HighCut Slope"), "dB/Oct"),
-        responseCurveComponent(audioProcessor),
+    : AudioProcessorEditor(&p), audioProcessor(p),
+    parametricFrequencySlider(*audioProcessor.state.getParameter("Parametric Frequency"), "Hz"),
+    parametricGainSlider(*audioProcessor.state.getParameter("Parametric Gain"), "dB"),
+    parametricQualitySlider(*audioProcessor.state.getParameter("Parametric Quality"), ""),
+    lowCutFrequencySlider(*audioProcessor.state.getParameter("LowCut Frequency"), "Hz"),
+    lowCutSlopeSlider(*audioProcessor.state.getParameter("LowCut Slope"), "dB/Oct"),
+    highCutFrequencySlider(*audioProcessor.state.getParameter("HighCut Frequency"), "Hz"),
+    highCutSlopeSlider(*audioProcessor.state.getParameter("HighCut Slope"), "dB/Oct"),
+    responseCurveComponent(audioProcessor),
 
 
 
@@ -600,27 +659,27 @@ ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
     analyzerEnableButtonAttachment(audioProcessor.state, "Analyzer Enabled", analyzerEnableButton)
 
 {
- 
-        parametricFrequencySlider.labels.add({ 0.f , "20Hz" });
-        parametricFrequencySlider.labels.add({ 1.f , "20kHz" });
 
-        parametricGainSlider.labels.add({ 0.f , "-30dB" });
-        parametricGainSlider.labels.add({ 1.f , "30dB" });
+    parametricFrequencySlider.labels.add({ 0.f , "20Hz" });
+    parametricFrequencySlider.labels.add({ 1.f , "20kHz" });
 
-        parametricQualitySlider.labels.add({ 0.f , "0.1" });
-        parametricQualitySlider.labels.add({ 1.f , "15" });
+    parametricGainSlider.labels.add({ 0.f , "-30dB" });
+    parametricGainSlider.labels.add({ 1.f , "30dB" });
 
-        lowCutFrequencySlider.labels.add({ 0.f , "20Hz" });
-        lowCutFrequencySlider.labels.add({ 1.f , "20kHz" });
+    parametricQualitySlider.labels.add({ 0.f , "0.1" });
+    parametricQualitySlider.labels.add({ 1.f , "15" });
 
-        highCutFrequencySlider.labels.add({ 0.f , "20Hz" });
-        highCutFrequencySlider.labels.add({ 1.f , "20kHz" });
+    lowCutFrequencySlider.labels.add({ 0.f , "20Hz" });
+    lowCutFrequencySlider.labels.add({ 1.f , "20kHz" });
 
-        lowCutSlopeSlider.labels.add({ 0.f , "12 dB/Oct" });
-        lowCutSlopeSlider.labels.add({ 1.f , "48 dB/Oct" });
+    highCutFrequencySlider.labels.add({ 0.f , "20Hz" });
+    highCutFrequencySlider.labels.add({ 1.f , "20kHz" });
 
-        highCutSlopeSlider.labels.add({ 0.f , "12 dB/Oct" });
-        highCutSlopeSlider.labels.add({ 1.f , "48 dB/Oct" });
+    lowCutSlopeSlider.labels.add({ 0.f , "12 dB/Oct" });
+    lowCutSlopeSlider.labels.add({ 1.f , "48 dB/Oct" });
+
+    highCutSlopeSlider.labels.add({ 0.f , "12 dB/Oct" });
+    highCutSlopeSlider.labels.add({ 1.f , "48 dB/Oct" });
 
 
     addAndMakeVisible(parametricFrequencySlider);
@@ -641,12 +700,51 @@ ZXOEQAudioProcessorEditor::ZXOEQAudioProcessorEditor(ZXOEQAudioProcessor& p)
     addAndMakeVisible(analyzerEnableButton);
 
 
+    parametricBypassButton.setLookAndFeel(&LookNF);
+    lowCutBypassButton.setLookAndFeel(&LookNF);
+    highCutBypassButton.setLookAndFeel(&LookNF);
+
+
+    auto safePointer = juce::Component::SafePointer<ZXOEQAudioProcessorEditor>(this);
+
+    parametricBypassButton.onClick = [safePointer]() {
+        if (auto* component = safePointer.getComponent()) {
+            auto bypass = component->parametricBypassButton.getToggleState();
+
+            component->parametricFrequencySlider.setEnabled(!bypass);
+            component->parametricGainSlider.setEnabled(!bypass);
+            component->parametricQualitySlider.setEnabled(!bypass);
+        }
+    };
+
+    lowCutBypassButton.onClick = [safePointer]() {
+        if (auto* component = safePointer.getComponent()) {
+            auto bypass = component->lowCutBypassButton.getToggleState();
+
+            component->lowCutSlopeSlider.setEnabled(!bypass);
+            component->lowCutFrequencySlider.setEnabled(!bypass);
+        }
+    };
+
+    highCutBypassButton.onClick = [safePointer]() {
+        if (auto* component = safePointer.getComponent()) {
+            auto bypass = component->highCutBypassButton.getToggleState();
+
+            component->highCutSlopeSlider.setEnabled(!bypass);
+            component->highCutFrequencySlider.setEnabled(!bypass);
+        }
+    };
+
+
+
     setSize (800, 900);
 }
 
 ZXOEQAudioProcessorEditor::~ZXOEQAudioProcessorEditor()
 {
-    
+    parametricBypassButton.setLookAndFeel(nullptr);
+    lowCutBypassButton.setLookAndFeel(nullptr);
+    highCutBypassButton.setLookAndFeel(nullptr);
 }
 
 
@@ -668,8 +766,8 @@ void ZXOEQAudioProcessorEditor::resized()
     // HighCut, Right side of lower half
     auto highCutLocation = bounds.removeFromRight(bounds.getWidth() * 0.5);
 
-    lowCutBypassButton.setBounds(lowCutLocation.removeFromBottom(25));
-    highCutBypassButton.setBounds(highCutLocation.removeFromBottom(25));
+    lowCutBypassButton.setBounds(lowCutLocation.removeFromBottom(40));
+    highCutBypassButton.setBounds(highCutLocation.removeFromBottom(40));
 
 
     lowCutFrequencySlider.setBounds(lowCutLocation.removeFromTop(lowCutLocation.getHeight() * .50));
@@ -679,7 +777,7 @@ void ZXOEQAudioProcessorEditor::resized()
     
     // Remaining middle for Parametric EQ
     
-    parametricBypassButton.setBounds(bounds.removeFromBottom(25));
+    parametricBypassButton.setBounds(bounds.removeFromBottom(40));
     
     parametricFrequencySlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
     parametricGainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.50));
