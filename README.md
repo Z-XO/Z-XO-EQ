@@ -14,6 +14,9 @@ Some of which include:
 
 Special thank you to MatKatMusic and his tutorials on youtube. I will link his youtube channel below. Would not have been able to do this without his guidance.
 https://www.youtube.com/channel/UCq4mxJs-LYz8rCZgT--tYIA
+
+
+
 ----------------------------------------------------------------------------
 Plugin with three bands disabled
 ----------------------------------------------------------------------------
