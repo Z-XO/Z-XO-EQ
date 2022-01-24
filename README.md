@@ -11,6 +11,7 @@ Some of which include:
 - Performance increase (as FFT is very taxing)
 - Possible ON/OFF button for the analyzer
 - Labels for the Low/High/Parametric Bands
+- The VST3 file was built using Visual Studio 2022, and because of this there might be compatibility issues on other computers, would like to address this at some point
 
 Special thank you to MatKatMusic and his tutorials on youtube. I will link his youtube channel below. Would not have been able to do this without his guidance.
 https://www.youtube.com/channel/UCq4mxJs-LYz8rCZgT--tYIA
